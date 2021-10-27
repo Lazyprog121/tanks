@@ -152,11 +152,67 @@ def ucs(graph, start, end):
     return visited
 
 
+def astar(grath, start, stop):
+    open_lst = {start}
+    closed_lst = set([])
+    poo = {}
+    poo[start] = 0
+    par = {}
+    par[start] = start
+    while len(open_lst) > 0:
+        n = None
+        for v in open_lst:
+            if n == None or poo[v] + 1 < poo[n] + 1:
+                n = v
+
+        if n == None:
+            print('Path does not exist!')
+            return None
+
+        if n == stop:
+            reconst_path = []
+            while par[n] != n:
+                reconst_path.append(n)
+                n = par[n]
+
+            reconst_path.append(start)
+            reconst_path.reverse()
+
+            # print('Path found: {}'.format(reconst_path))
+            return reconst_path
+
+        temp = grath.get(n)
+        for m in temp:
+            if m not in open_lst and m not in closed_lst:
+                open_lst.add(m)
+                par[m] = n
+                poo[m] = poo[n] + 1
+
+            else:
+                if poo[m] > poo[n] + 1:
+                    poo[m] = poo[n] + 1
+                    par[m] = n
+
+                    if m in closed_lst:
+                        closed_lst.remove(m)
+                        open_lst.add(m)
+
+        open_lst.remove(n)
+        closed_lst.add(n)
+
+    print('Path does not exist!')
+    return None
+
+
 class Player(pygame.sprite.Sprite):
     Is_Rotated_Up = False
     Is_Rotated_Down = False
     Is_Rotated_Right = False
     Is_Rotated_Left = False
+    Last_shoot = 0
+    Frequency = 1000
+    Direction = 'down'
+    Goal = (0, 0)
 
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -174,107 +230,202 @@ class Player(pygame.sprite.Sprite):
         self.rot_speed = 5
         self.last_update = pygame.time.get_ticks()
 
+        self.Goal = (self.rect.x // CELL, self.rect.y // CELL)
+
     def update(self):
-        self.speedx = 0
-        self.speedy = 0
+        self.speedx = 3
+        self.speedy = 3
 
-        key_state = pygame.key.get_pressed()
+        graph = get_graph()
+        self.astar_path(graph)
 
-        if key_state[pygame.K_LEFT]:
-            self.Is_Rotated_Up = False
-            self.Is_Rotated_Down = False
-            self.Is_Rotated_Right = False
+        self.image.set_colorkey((255, 255, 255))
 
-            if not self.Is_Rotated_Left:
-                self.image = pygame.transform.scale(pygame.image.load(PLAYER_LEFT_IMG_PATH), (30, 30))
+        # self.speedx = 0
+        # self.speedy = 0
+        #
+        # key_state = pygame.key.get_pressed()
+        #
+        # if key_state[pygame.K_LEFT]:
+        #     self.Is_Rotated_Up = False
+        #     self.Is_Rotated_Down = False
+        #     self.Is_Rotated_Right = False
+        #
+        #     if not self.Is_Rotated_Left:
+        #         self.image = pygame.transform.scale(pygame.image.load(PLAYER_LEFT_IMG_PATH), (30, 30))
+        #         self.Is_Rotated_Left = True
+        #
+        #     self.speedx = -5
+        #     self.speedy = 0
+        #
+        # if key_state[pygame.K_RIGHT]:
+        #     self.Is_Rotated_Up = False
+        #     self.Is_Rotated_Down = False
+        #     self.Is_Rotated_Left = False
+        #
+        #     if not self.Is_Rotated_Right:
+        #         self.image = pygame.transform.scale(pygame.image.load(PLAYER_RIGHT_IMG_PATH), (30, 30))
+        #         self.Is_Rotated_Right = True
+        #
+        #     self.speedx = 5
+        #     self.speedy = 0
+        #
+        # if key_state[pygame.K_DOWN]:
+        #     self.Is_Rotated_Up = False
+        #     self.Is_Rotated_Right = False
+        #     self.Is_Rotated_Left = False
+        #
+        #     if not self.Is_Rotated_Down:
+        #         self.image = pygame.transform.scale(pygame.image.load(PLAYER_DOWN_IMG_PATH), (30, 30))
+        #         self.Is_Rotated_Down = True
+        #
+        #     self.speedy = 5
+        #     self.speedx = 0
+        #
+        # if key_state[pygame.K_UP]:
+        #     self.Is_Rotated_Down = False
+        #     self.Is_Rotated_Right = False
+        #     self.Is_Rotated_Left = False
+        #
+        #     if not self.Is_Rotated_Up:
+        #         self.image = pygame.transform.scale(pygame.image.load(PLAYER_UP_IMG_PATH), (30, 30))
+        #         self.Is_Rotated_Up = True
+        #
+        #     self.speedy = -5
+        #     self.speedx = 0
+        #
+        # self.image.set_colorkey((255, 255, 255))
+        # self.rect.x += self.speedx
+        # self.rect.y += self.speedy
+        #
+        # hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+        # if hits:
+        #     if self.Is_Rotated_Up:
+        #         y = hits[0].rect.bottom
+        #         self.rect.top = y + 1
+        #     if self.Is_Rotated_Down:
+        #         y = hits[0].rect.top
+        #         self.rect.bottom = y - 1
+        #     if self.Is_Rotated_Right:
+        #         x = hits[0].rect.left
+        #         self.rect.right = x - 1
+        #     if self.Is_Rotated_Left:
+        #         x = hits[0].rect.right
+        #         self.rect.left = x + 1
 
-                self.image.set_colorkey((255, 255, 255))
+    def set_goal(self):
+        c = 0
+        r = 0
+        is_right_value = False
+        while not is_right_value:
+            c = random.randrange(3, 20)
+            r = random.randrange(3, 20)
+            if GRID[r][c] != 1:
+                is_right_value = True
 
-                self.Is_Rotated_Left = True
+        self.Goal = (c, r)
 
-            self.speedx = -5
-            self.speedy = 0
+    def astar_path(self, graph):
+        start = (self.rect.x // CELL, self.rect.y // CELL)
+        if start == self.Goal:
+            self.set_goal()
 
-        if key_state[pygame.K_RIGHT]:
-            self.Is_Rotated_Up = False
-            self.Is_Rotated_Down = False
-            self.Is_Rotated_Left = False
+        path = astar(graph, start, self.Goal)
 
-            if not self.Is_Rotated_Right:
+        for cell in path:
+            pygame.draw.rect(WINDOW, pygame.Color('red'), get_rect(*cell), CELL, border_radius=CELL // 2)
+
+        first = path[0]
+        second = path[1]
+        last = path[-1]
+        pygame.draw.rect(WINDOW, pygame.Color('black'), get_rect(*last), CELL, border_radius=CELL // 10)
+
+        x_s, y_s = start
+        x_g, y_g = second
+        x_f, y_f = first
+
+        x_check, y_check = (x_f * CELL, y_f * CELL)
+        checking_x = x_check - self.rect.x
+        checking_y = y_check - self.rect.y
+
+        if -3 <= checking_x <= 3 and -3 <= checking_y <= 3:
+            if x_s < x_g:
+                self.Direction = 'right'
                 self.image = pygame.transform.scale(pygame.image.load(PLAYER_RIGHT_IMG_PATH), (30, 30))
+                self.rect.x += self.speedx
 
-                self.image.set_colorkey((255, 255, 255))
+                for e in ENEMIES:
+                    if self.rect.y - 3 <= e.rect.y <= self.rect.y + 3 and e.rect.x >= self.rect.x:
+                        print('h-r')
+                        self.shoot_with_delay()
+            elif x_s > x_g:
+                self.Direction = 'left'
+                self.image = pygame.transform.scale(pygame.image.load(PLAYER_LEFT_IMG_PATH), (30, 30))
+                self.rect.x += -self.speedx
 
-                self.Is_Rotated_Right = True
-
-            self.speedx = 5
-            self.speedy = 0
-
-        if key_state[pygame.K_DOWN]:
-            self.Is_Rotated_Up = False
-            self.Is_Rotated_Right = False
-            self.Is_Rotated_Left = False
-
-            if not self.Is_Rotated_Down:
+                for e in ENEMIES:
+                    if self.rect.y - 3 <= e.rect.y <= self.rect.y + 3 and e.rect.x <= self.rect.x:
+                        print('h-l')
+                        self.shoot_with_delay()
+            elif y_s < y_g:
+                self.Direction = 'down'
                 self.image = pygame.transform.scale(pygame.image.load(PLAYER_DOWN_IMG_PATH), (30, 30))
+                self.rect.y += self.speedy
 
-                self.image.set_colorkey((255, 255, 255))
-
-                self.Is_Rotated_Down = True
-
-            self.speedy = 5
-            self.speedx = 0
-
-        if key_state[pygame.K_UP]:
-            self.Is_Rotated_Down = False
-            self.Is_Rotated_Right = False
-            self.Is_Rotated_Left = False
-
-            if not self.Is_Rotated_Up:
+                for e in ENEMIES:
+                    if self.rect.x - 3 <= e.rect.x <= self.rect.x + 3 and e.rect.y >= self.rect.y:
+                        print('h-d')
+                        self.shoot_with_delay()
+            elif y_s > y_g:
+                self.Direction = 'up'
                 self.image = pygame.transform.scale(pygame.image.load(PLAYER_UP_IMG_PATH), (30, 30))
+                self.rect.y += -self.speedy
 
-                self.image.set_colorkey((255, 255, 255))
+                for e in ENEMIES:
+                    if self.rect.x - 3 <= e.rect.x <= self.rect.x + 3 and e.rect.y <= self.rect.y:
+                        print('h-u')
+                        self.shoot_with_delay()
+        else:
+            if self.Direction == 'right':
+                self.rect.x += self.speedx
+            elif self.Direction == 'left':
+                self.rect.x += -self.speedx
+            elif self.Direction == 'down':
+                self.rect.y += self.speedy
+            elif self.Direction == 'up':
+                self.rect.y += -self.speedy
 
-                self.Is_Rotated_Up = True
 
-            self.speedy = -5
-            self.speedx = 0
 
-        self.rect.x += self.speedx
-        self.rect.y += self.speedy
 
-        hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-        if hits:
-            if self.Is_Rotated_Up:
-                y = hits[0].rect.bottom
-                self.rect.top = y + 1
-            if self.Is_Rotated_Down:
-                y = hits[0].rect.top
-                self.rect.bottom = y - 1
-            if self.Is_Rotated_Right:
-                x = hits[0].rect.left
-                self.rect.right = x - 1
-            if self.Is_Rotated_Left:
-                x = hits[0].rect.right
-                self.rect.left = x + 1
-            # self.rect.x -= self.speedx
-            # self.rect.y -= self.speedy
+
+            # hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+            # if hits:
+            #     self.rect.x = x_f * CELL
+            #     self.rect.y = y_f * CELL
+
 
     def shoot(self):
-        direction = 'up'
+        # direction = 'up'
+        #
+        # if self.Is_Rotated_Left:
+        #     direction = 'left'
+        # if self.Is_Rotated_Right:
+        #     direction = 'right'
+        # if self.Is_Rotated_Down:
+        #     direction = 'down'
+        # if self.Is_Rotated_Up:
+        #     direction = 'up'
 
-        if self.Is_Rotated_Left:
-            direction = 'left'
-        if self.Is_Rotated_Right:
-            direction = 'right'
-        if self.Is_Rotated_Down:
-            direction = 'down'
-        if self.Is_Rotated_Up:
-            direction = 'up'
-
-        bullet = Bullet(self.rect.centerx, self.rect.centery, direction)
+        bullet = Bullet(self.rect.centerx, self.rect.centery, self.Direction)
         SPRITES.add(bullet)
         PLAYER_BULLETS.add(bullet)
+
+    def shoot_with_delay(self):
+        now = pygame.time.get_ticks()
+        if now - self.Last_shoot > self.Frequency:
+            self.shoot()
+            self.Last_shoot = now
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -312,102 +463,10 @@ class Enemy(pygame.sprite.Sprite):
         self.speedx = 3
         self.speedy = 3
 
-        if self.Direction == 'down':
-            self.image = pygame.transform.scale(pygame.image.load(ENEMY_DOWN_IMG_PATH), (30, 30))
-            self.image.set_colorkey((255, 255, 255))
-
-            self.rect.y += self.speedy
-
-            now = pygame.time.get_ticks()
-            if now - self.Last_shoot > self.Frequency:
-                self.shoot()
-                self.Last_shoot = now
-
-            hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-            if hits:
-                y = hits[0].rect.top
-                self.rect.bottom = y - 1
-
-                d = random.randrange(1, 4)
-                if d == 1:
-                    self.Direction = 'left'
-                if d == 2:
-                    self.Direction = 'right'
-                if d == 3:
-                    self.Direction = 'up'
-
-        elif self.Direction == 'up':
-            self.image = pygame.transform.scale(pygame.image.load(ENEMY_UP_IMG_PATH), (30, 30))
-            self.image.set_colorkey((255, 255, 255))
-
-            self.rect.x += 0
-            self.rect.y += -self.speedy
-
-            now = pygame.time.get_ticks()
-            if now - self.Last_shoot > self.Frequency:
-                self.shoot()
-                self.Last_shoot = now
-
-            hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-            if hits:
-                y = hits[0].rect.bottom
-                self.rect.top = y + 1
-
-                d = random.randrange(1, 4)
-                if d == 1:
-                    self.Direction = 'left'
-                if d == 2:
-                    self.Direction = 'right'
-                if d == 3:
-                    self.Direction = 'down'
-
-        elif self.Direction == 'left':
-            self.image = pygame.transform.scale(pygame.image.load(ENEMY_LEFT_IMG_PATH), (30, 30))
-            self.image.set_colorkey((255, 255, 255))
-
-            self.rect.x += -self.speedx
-
-            now = pygame.time.get_ticks()
-            if now - self.Last_shoot > self.Frequency:
-                self.shoot()
-                self.Last_shoot = now
-
-            hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-            if hits:
-                x = hits[0].rect.right
-                self.rect.left = x + 1
-
-                d = random.randrange(1, 4)
-                if d == 1:
-                    self.Direction = 'down'
-                if d == 2:
-                    self.Direction = 'right'
-                if d == 3:
-                    self.Direction = 'up'
-
-        elif self.Direction == 'right':
-            self.image = pygame.transform.scale(pygame.image.load(ENEMY_RIGHT_IMG_PATH), (30, 30))
-            self.image.set_colorkey((255, 255, 255))
-
-            self.rect.x += self.speedx
-
-            now = pygame.time.get_ticks()
-            if now - self.Last_shoot > self.Frequency:
-                self.shoot()
-                self.Last_shoot = now
-
-            hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-            if hits:
-                x = hits[0].rect.left
-                self.rect.right = x - 1
-
-                d = random.randrange(1, 4)
-                if d == 1:
-                    self.Direction = 'left'
-                if d == 2:
-                    self.Direction = 'down'
-                if d == 3:
-                    self.Direction = 'up'
+        now = pygame.time.get_ticks()
+        if now - self.Last_shoot > self.Frequency:
+            self.shoot()
+            self.Last_shoot = now
 
         graph = get_graph()
         if self.Alg == 1:
@@ -416,6 +475,76 @@ class Enemy(pygame.sprite.Sprite):
             self.dfs_path(graph)
         elif self.Alg == 3:
             self.uniform_cost_search_path(graph)
+
+        # if self.Direction == 'down':
+        #     self.image = pygame.transform.scale(pygame.image.load(ENEMY_DOWN_IMG_PATH), (30, 30))
+        #     self.rect.y += self.speedy
+        #
+        #     hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+        #     if hits:
+        #         y = hits[0].rect.top
+        #         self.rect.bottom = y - 1
+        #
+        #         d = random.randrange(1, 4)
+        #         if d == 1:
+        #             self.Direction = 'left'
+        #         if d == 2:
+        #             self.Direction = 'right'
+        #         if d == 3:
+        #             self.Direction = 'up'
+        #
+        # elif self.Direction == 'up':
+        #     self.image = pygame.transform.scale(pygame.image.load(ENEMY_UP_IMG_PATH), (30, 30))
+        #     self.rect.y += -self.speedy
+        #
+        #     hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+        #     if hits:
+        #         y = hits[0].rect.bottom
+        #         self.rect.top = y + 1
+        #
+        #         d = random.randrange(1, 4)
+        #         if d == 1:
+        #             self.Direction = 'left'
+        #         if d == 2:
+        #             self.Direction = 'right'
+        #         if d == 3:
+        #             self.Direction = 'down'
+        #
+        # elif self.Direction == 'left':
+        #     self.image = pygame.transform.scale(pygame.image.load(ENEMY_LEFT_IMG_PATH), (30, 30))
+        #     self.rect.x += -self.speedx
+        #
+        #     hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+        #     if hits:
+        #         x = hits[0].rect.right
+        #         self.rect.left = x + 1
+        #
+        #         d = random.randrange(1, 4)
+        #         if d == 1:
+        #             self.Direction = 'down'
+        #         if d == 2:
+        #             self.Direction = 'right'
+        #         if d == 3:
+        #             self.Direction = 'up'
+        #
+        # elif self.Direction == 'right':
+        #     self.image = pygame.transform.scale(pygame.image.load(ENEMY_RIGHT_IMG_PATH), (30, 30))
+        #     self.rect.x += self.speedx
+        #
+        #     hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+        #     if hits:
+        #         x = hits[0].rect.left
+        #         self.rect.right = x - 1
+        #
+        #         d = random.randrange(1, 4)
+        #         if d == 1:
+        #             self.Direction = 'left'
+        #         if d == 2:
+        #             self.Direction = 'down'
+        #         if d == 3:
+        #             self.Direction = 'up'
+
+        self.image.set_colorkey((255, 255, 255))
 
     def shoot(self):
         bullet = Bullet(self.rect.centerx, self.rect.centery, self.Direction)
@@ -439,75 +568,43 @@ class Enemy(pygame.sprite.Sprite):
             pygame.draw.rect(WINDOW, pygame.Color('yellow'), get_rect(*cell), CELL, border_radius=CELL // 2)
             cell = visited[cell]
 
-        # i = 1
-        # cell = goal
-        # while cell and cell in visited:
-        #     i += 1
-        #     if i == count - 1:
-        #         previous = cell
-        #     p_cell = cell
-        #     cell = visited[cell]
+        i = 1
+        cell = goal
+        p_cell = start
+        while cell and cell in visited:
+            i += 1
+            if i == count - 1:
+                previous = cell
+            p_cell = cell
+            cell = visited[cell]
 
         # pygame.draw.rect(WINDOW, pygame.Color('black'), get_rect(*previous), CELL, border_radius=CELL // 10)
 
-        # xE, yE = start
-        # xC, yC = previous
-        # if xE < xC:
-        #     self.Direction = 'right'
-        #     # hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-        #     # if hits:
-        #     #     x = hits[0].rect.left
-        #     #     self.rect.right = x - 1
-        #     #
-        #     #     d = random.randrange(1, 4)
-        #     #     if d == 1:
-        #     #         self.Direction = 'left'
-        #     #     if d == 2:
-        #     #         self.Direction = 'down'
-        #     #     if d == 3:
-        #     #         self.Direction = 'up'
-        # elif xE > xC:
-        #     self.Direction = 'left'
-        #     # hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-        #     # if hits:
-        #     #     x = hits[0].rect.right
-        #     #     self.rect.left = x + 1
-        #     #
-        #     #     d = random.randrange(1, 4)
-        #     #     if d == 1:
-        #     #         self.Direction = 'down'
-        #     #     if d == 2:
-        #     #         self.Direction = 'right'
-        #     #     if d == 3:
-        #     #         self.Direction = 'up'
-        # elif yE < yC:
-        #     self.Direction = 'down'
-        #     # hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-        #     # if hits:
-        #     #     y = hits[0].rect.top
-        #     #     self.rect.bottom = y - 1
-        #     #
-        #     #     d = random.randrange(1, 4)
-        #     #     if d == 1:
-        #     #         self.Direction = 'left'
-        #     #     if d == 2:
-        #     #         self.Direction = 'right'
-        #     #     if d == 3:
-        #     #         self.Direction = 'up'
-        # elif yE > yC:
-        #     self.Direction = 'up'
-        #     # hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
-        #     # if hits:
-        #     #     y = hits[0].rect.bottom
-        #     #     self.rect.top = y + 1
-        #     #
-        #     #     d = random.randrange(1, 4)
-        #     #     if d == 1:
-        #     #         self.Direction = 'left'
-        #     #     if d == 2:
-        #     #         self.Direction = 'right'
-        #     #     if d == 3:
-        #     #         self.Direction = 'down'
+        xE, yE = start
+        xC, yC = previous
+        xP, yP = p_cell
+
+        if xE < xC:
+            self.Direction = 'right'
+            self.image = pygame.transform.scale(pygame.image.load(ENEMY_RIGHT_IMG_PATH), (30, 30))
+            self.rect.x += self.speedx
+        elif xE > xC:
+            self.Direction = 'left'
+            self.image = pygame.transform.scale(pygame.image.load(ENEMY_LEFT_IMG_PATH), (30, 30))
+            self.rect.x += -self.speedx
+        elif yE < yC:
+            self.Direction = 'down'
+            self.image = pygame.transform.scale(pygame.image.load(ENEMY_DOWN_IMG_PATH), (30, 30))
+            self.rect.y += self.speedy
+        elif yE > yC:
+            self.Direction = 'up'
+            self.image = pygame.transform.scale(pygame.image.load(ENEMY_UP_IMG_PATH), (30, 30))
+            self.rect.y += -self.speedy
+
+        hits = pygame.sprite.spritecollide(self, BRICKS, False, pygame.sprite.collide_rect_ratio(1))
+        if hits:
+            self.rect.x = xP * CELL
+            self.rect.y = yP * CELL
 
     def dfs_path(self, graph):
         start = (self.rect.x // CELL, self.rect.y // CELL)
@@ -805,7 +902,6 @@ def loop(window, clock):
 
         ENEMIES.add(enemy)
         SPRITES.add(enemy)
-        # break
 
     GRID = [[0] * COLUMNS for i in range(ROWS)]
     fill_grid()
@@ -871,8 +967,8 @@ def loop(window, clock):
 
         hits = pygame.sprite.spritecollide(player, ENEMY_BULLETS, True, pygame.sprite.collide_rect_ratio(0.8))
         if hits:
-            health -= 1
-            hearts[health].kill()
+            # health -= 1
+            # hearts[health].kill()
             if health == 0:
                 TIME = pygame.time.get_ticks() - start_time
                 IS_VICTORY = False
