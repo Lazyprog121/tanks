@@ -1128,7 +1128,7 @@ def show_start(window, clock):
 def save_stat(result, score, time, alg):
     file = open('stat.csv', 'a', newline='')
     writer = csv.writer(file)
-    writer.writerow([str(result), str(time), str(score), alg])
+    writer.writerow([int(result), str(time / 1000), str(score), alg])
     file.close()
 
 HISTORY = []
@@ -1203,7 +1203,7 @@ def loop(window, clock, the_agent, game_state, game_history):
             TIME = pygame.time.get_ticks() - start_time
             IS_VICTORY = True
 
-            save_stat(IS_VICTORY, 5, TIME, 'expectimax')
+            save_stat(IS_VICTORY, 5 - len(ENEMIES), TIME, 1)
 
             player.kill()
 
